@@ -1,23 +1,85 @@
 import re
-from typing import Dict
+from typing import Dict, Union, Optional, List
+
+import requests
 from requests.sessions import Session
 from bs4 import BeautifulSoup
-from helper import BASE_WEBSITE, fetch_response, cookies
+from utils import fetch_response, cookies
+
+BASE_WEBSITE = 'https://ted.europa.eu'
+
+SEARCH_URL = "https://ted.europa.eu/TED/search/searchResult.do"
 
 
-def extract_document_main_page_url(soup: BeautifulSoup) -> str:
+def fetch_data(session: requests.Session, url: str, cookies: dict, params: Optional[dict] = None) -> List[str]:
     """
-    Extracts the URL of the document's main page from the given BeautifulSoup object.
+    Fetch and extract data from a webpage.
 
     Args:
-        soup (BeautifulSoup): The BeautifulSoup object representing the HTML page.
+        session (requests.Session): The session for making HTTP requests.
+        url (str): The URL to fetch data from.
+        cookies (dict): Cookies to be used in the request.
+        params (dict, optional): Query parameters for the request.
 
     Returns:
-        str: The URL of the document's main page.
+        List[str]: List of extracted URLs.
+    """
+    response = fetch_response(session, url, cookies, params)
+    if not response:
+        return []
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    td_elements = soup.find_all('td', class_='nowrap')
+    hrefs = [td.find('a')['href'] for td in td_elements if td.find('a')]
+    return hrefs
+
+
+def get_last_page(element: BeautifulSoup) -> int:
+    """
+    Get the last page number from the BeautifulSoup element.
+
+    Args:
+        element (BeautifulSoup): The BeautifulSoup element containing pagination information.
+
+    Returns:
+        int: The last page number.
+    """
+    last_page_link = element.find('a')
+    match = re.search(r'page=(\d+)', last_page_link['href'])
+    last_page_number = int(match.group(1))
+    return last_page_number
+
+
+def parse_url(href: str) -> str:
+    """
+    Parse and modify a URL.
+
+    Args:
+        href (str): The URL to be modified.
+
+    Returns:
+        str: The modified URL.
+    """
+    return href.replace("TEXT", "DATA").replace("src=0", "tabId=3")
+
+
+def data_page_exist_in_document(soup: BeautifulSoup) -> bool:
+    """
+       Check if a data page exists in the document.
+
+       Args:
+           soup (BeautifulSoup): The BeautifulSoup object representing the HTML content of the document.
+
+       Returns:
+           bool: True if a data page exists in the document, False otherwise.
     """
     notice_tab_link = soup.find('li', {'class': 'noticeTab'})
-    a_tag = notice_tab_link.find('a')
-    return a_tag['href']
+    a_tag = notice_tab_link.find('a').get('href', '')
+
+    if not a_tag:
+        return False
+
+    return True
 
 
 def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
@@ -46,7 +108,8 @@ def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
     return data_dict
 
 
-def scrape_ted_data(session: Session, url: str) -> Dict[str, str]:
+def scrape_ted_data(session: Session, document_data_page_url: str, document_main_page_url) -> \
+        Union[Dict[str, str], None]:
     """
     Scrapes data from a TED document page.
 
@@ -59,12 +122,13 @@ def scrape_ted_data(session: Session, url: str) -> Dict[str, str]:
     """
     data_dict = {}
 
-    response = fetch_response(session=session, cookies=cookies, url=url)
+    response = fetch_response(session=session, cookies=cookies, url=document_data_page_url)
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    document_main_page_url = extract_document_main_page_url(soup)
+    if not data_page_exist_in_document(soup):
+        return None
 
-    data_dict['URL'] = BASE_WEBSITE + document_main_page_url
+    data_dict['URL'] = document_main_page_url
 
     data_dict.update(extract_data_from_table(soup))
 
