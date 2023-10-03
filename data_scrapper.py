@@ -1,14 +1,17 @@
+import logging
 import re
 from typing import Dict, Union, Optional, List
 
 import requests
 from requests.sessions import Session
 from bs4 import BeautifulSoup
-from utils import fetch_response, cookies
+from utils import fetch_response
 
 BASE_WEBSITE = 'https://ted.europa.eu'
 
-SEARCH_URL = "https://ted.europa.eu/TED/search/searchResult.do"
+SEARCH_URL = "https://ted.europa.eu/TED/search/searchResult.do?page=1"
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_data(session: requests.Session, url: str, cookies: dict, params: Optional[dict] = None) -> List[str]:
@@ -24,14 +27,18 @@ def fetch_data(session: requests.Session, url: str, cookies: dict, params: Optio
     Returns:
         List[str]: List of extracted URLs.
     """
-    response = fetch_response(session, url, cookies, params)
-    if not response:
-        return []
+    try:
+        response = fetch_response(session, url, cookies, params)
+        if not response:
+            return []
 
-    soup = BeautifulSoup(response.text, 'html.parser')
-    td_elements = soup.find_all('td', class_='nowrap')
-    hrefs = [td.find('a')['href'] for td in td_elements if td.find('a')]
-    return hrefs
+        soup = BeautifulSoup(response.text, 'html.parser')
+        td_elements = soup.find_all('td', class_='nowrap')
+        hrefs = [td.find('a')['href'] for td in td_elements if td.find('a')]
+        return hrefs
+    except Exception as e:
+        logger.error(f'An error occurred while fetching data from {url}: {str(e)}')
+        return []
 
 
 def get_last_page(element: BeautifulSoup) -> int:
@@ -44,10 +51,14 @@ def get_last_page(element: BeautifulSoup) -> int:
     Returns:
         int: The last page number.
     """
-    last_page_link = element.find('a')
-    match = re.search(r'page=(\d+)', last_page_link['href'])
-    last_page_number = int(match.group(1))
-    return last_page_number
+    try:
+        last_page_link = element.find('a')
+        match = re.search(r'page=(\d+)', last_page_link['href'])
+        last_page_number = int(match.group(1))
+        return last_page_number
+    except Exception as e:
+        logger.error(f'An error occurred while getting the last page number: {str(e)}')
+        return 0
 
 
 def parse_url(href: str) -> str:
@@ -73,13 +84,12 @@ def data_page_exist_in_document(soup: BeautifulSoup) -> bool:
        Returns:
            bool: True if a data page exists in the document, False otherwise.
     """
-    notice_tab_link = soup.find('li', {'class': 'noticeTab'})
-    a_tag = notice_tab_link.find('a').get('href', '')
-
-    if not a_tag:
+    try:
+        data = soup.select_one('a.selected:-soup-contains("Data")')
+        return True if data else False
+    except AttributeError as e:
+        logger.error(f'An error occurred while checking if a data page exists: {str(e)}')
         return False
-
-    return True
 
 
 def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
@@ -108,7 +118,7 @@ def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
     return data_dict
 
 
-def scrape_ted_data(session: Session, document_data_page_url: str, document_main_page_url) -> \
+def scrape_ted_data(session: Session, cookies, document_data_page_url: str, document_main_page_url) -> \
         Union[Dict[str, str], None]:
     """
     Scrapes data from a TED document page.
