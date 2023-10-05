@@ -9,7 +9,7 @@ from utils import fetch_response
 
 BASE_WEBSITE = 'https://ted.europa.eu'
 
-SEARCH_URL = "https://ted.europa.eu/TED/search/searchResult.do?page=1"
+SEARCH_URL = "https://ted.europa.eu/TED/search/searchResult.do"
 
 logger = logging.getLogger(__name__)
 
