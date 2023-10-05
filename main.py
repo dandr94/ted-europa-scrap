@@ -1,11 +1,10 @@
 import time
 
-import requests
 from bs4 import BeautifulSoup
 import logging
 from data_handling import load_existing_data, OUTPUT_FILE, load_state, save_state, save_data
 from data_scrapper import scrape_ted_data, fetch_data, parse_url, get_last_page, SEARCH_URL, BASE_WEBSITE
-from utils import fetch_response, create_session, get_cookies
+from utils import fetch_response, create_session, get_cookies, get_current_time, time_left_until_all_data_is_fetched
 from user_interface import print_last_processed_page_message
 
 REQUEST_DELAY = 1
@@ -83,25 +82,26 @@ def main() -> None:
                     return
 
                 if document_main_url in existing_links and last_processed_flag:
-                    print(f'Continuing to next url, because this one is already scrapped: {document_main_url}')
+                    print(
+                        f'Continuing to next URL on page {page}, because this one is already scrapped: {document_main_url}')
                     logging.info(
-                        f'Continuing to the next URL, because this one is already scrapped: {document_main_url}')
+                        f'Continuing to the next URL on page {page}, because this one is already scrapped: {document_main_url}')
 
                     continue
 
-                print(f'Working on URL on page {page}: {current_url}...')
+                print(f'[{get_current_time()}] - Working on URL on page {page}/{last_page_number}: {current_url}...')
 
                 data = scrape_ted_data(session, cookies, data_url, document_main_url)
+
                 if data:
                     all_data.append(data)
-                    curr_time = time.localtime()
                     print(
-                        f'{time.strftime("%H:%M:%S", curr_time)}Successfully fetched data on page {page} from URL {data_url}')
+                        f'[{get_current_time()}] - Successfully fetched data on page {page} from URL {data_url}')
                     logging.info(f'Successfully fetched data on page {page} from URL {data_url}')
 
                 else:
                     print(
-                        f'Impossible to fetch data from URL: {document_main_url} on page {page} because it does not '
+                        f'[{get_current_time()}] - Impossible to fetch data from URL: {document_main_url} on page {page} because it does not '
                         f'have a data page')
                     logging.warning(
                         f'Impossible to fetch data from URL: {document_main_url} on page {page} because it does not '
@@ -109,6 +109,14 @@ def main() -> None:
                 time.sleep(REQUEST_DELAY)
 
             save_data(all_data, OUTPUT_FILE)
+
+            logging.info(f'[{get_current_time()}] - Data saved successfully to {OUTPUT_FILE}!')
+
+            if last_processed_flag:
+                pages_remaining = last_page_number - state['last_processed_page']
+                documents_left = pages_remaining * 25
+                print(
+                    f'[{get_current_time()}] - Time left until all data is fetched: ~{time_left_until_all_data_is_fetched(documents_left)} ')
 
     except KeyboardInterrupt:
         print("\nProcess interrupted by user. Saving data collected so far.")
