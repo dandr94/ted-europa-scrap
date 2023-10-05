@@ -1,6 +1,8 @@
 import json
 from typing import List, Dict
 
+from utils import get_current_time
+
 OUTPUT_FILE = 'output.json'
 
 STATE_FILE = 'state.json'
@@ -35,7 +37,7 @@ def save_data(data: List[Dict[str, str]], filename: str) -> None:
     """
     with open(filename, 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
-    print(f'Data saved successfully to {filename}!')
+    print(f'[{get_current_time()}] - Data saved successfully to {filename}!')
 
 
 def load_state() -> Dict:
