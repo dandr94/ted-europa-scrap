@@ -7,6 +7,34 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+class TextFormatter:
+    def __init__(self):
+        self.symbols = {
+            'success': '\u2713',
+            'fail': '\u2717',
+            'work_in_progress': '\u21BB'
+        }
+
+        self.ANSI = {
+            'red': '\033[91m',
+            'green': '\033[92m',
+            'yellow': '\033[93m',
+            'reset': '\033[0m'
+        }
+
+    def format_message(self, message, color, symbol=None):
+        return f'{self.ANSI[color]}{self.symbols[symbol]} {message}{self.ANSI["reset"]}'
+
+    def format_message_success(self, message):
+        return self.format_message(message, 'green', 'success')
+
+    def format_message_fail(self, message):
+        return self.format_message(message, 'red', 'fail')
+
+    def format_message_work_in_progress(self, message):
+        return self.format_message(message, 'yellow', 'work_in_progress')
+
+
 def create_session() -> requests.Session:
     session = requests.Session()
     return session
