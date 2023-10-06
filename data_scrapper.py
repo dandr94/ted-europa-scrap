@@ -14,7 +14,7 @@ SEARCH_URL = "https://ted.europa.eu/TED/search/searchResult.do"
 logger = logging.getLogger(__name__)
 
 
-def fetch_data(session: requests.Session, url: str, cookies: dict, params: Optional[dict] = None) -> List[str]:
+def fetch_hrefs(session: requests.Session, url: str, cookies: dict, params: Optional[dict] = None) -> List[str]:
     """
     Fetch and extract data from a webpage.
 
