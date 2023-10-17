@@ -1,13 +1,50 @@
-def print_last_processed_page_message(last_processed_page):
-    print(f"Last processed page: {last_processed_page}")
-    print('You can processed from the last processed page and update your data from that page to the end.')
-    print(
-        'If you choose (n) it will start from page 1 and it will update your existing data until it meets an '
-        'already visited url ')
-    print(
-        'If you want to start from page 1 and scrape all the data again, you need to delete the output.json and '
-        'state.json')
+from prettytable import PrettyTable
+from utils import state_file_exists
 
 
-def get_user_choice_for_last_processed_page():
-    return input("Do you want to start from the last processed page? (y/n): ").strip().lower()
+def default_app_message(text_formatter, entries, last_processed_page, output_status, state_status):
+    print(return_default_message_table(text_formatter, entries, last_processed_page, output_status, state_status))
+
+    if state_file_exists():
+        print(return_action_message_table())
+
+
+def get_user_choice_for_action():
+    return input('Choose an action: ')
+
+
+def return_default_message_table(text_formatter, entries, last_processed_page, output_status, state_status):
+    table = PrettyTable()
+
+    table.title = "Welcome to Ted-Europa data scrapper!"
+    table.field_names = ["File", 'Status']
+
+    separator = ["-" * len(table.title)] * len(table.field_names)
+
+    table.add_row([text_formatter.format_custom_message(f"output.json (entries: {entries})", "yellow"),
+                   text_formatter.format_message_success(
+                       'Exist') if output_status else text_formatter.format_message_fail("Doesn't exist")])
+    table.add_row(separator)
+    table.add_row(
+        [text_formatter.format_custom_message(f"state.json (last processed page {last_processed_page})", "yellow"),
+         text_formatter.format_message_success(
+             'Exist') if state_status else text_formatter.format_message_fail("Doesn't exist")])
+
+    return table
+
+
+def return_action_message_table():
+    table = PrettyTable()
+
+    table.title = "Actions (type 1,2..etc):"
+    table.field_names = ["Action", 'Info']
+
+    separator = ["-" * len(table.title)] * len(table.field_names)
+
+    table.add_row(['1. Continue', 'Continue fetching data from last processed page'])
+
+    table.add_row(separator)
+    table.add_row(['2. Update',
+                   'Updates the already existing data with newest if possible\nuntil it meets an already existing '
+                   'data in output.json'])
+    return table
