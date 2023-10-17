@@ -22,7 +22,7 @@ class TextFormatter:
             'reset': '\033[0m'
         }
 
-    def format_message(self, message, color, symbol=None):
+    def format_message(self, message, color, symbol):
         return f'{self.ANSI[color]}{self.symbols[symbol]} {message}{self.ANSI["reset"]}'
 
     def format_message_success(self, message):
@@ -33,6 +33,9 @@ class TextFormatter:
 
     def format_message_work_in_progress(self, message):
         return self.format_message(message, 'yellow', 'work_in_progress')
+
+    def format_custom_message(self, message, color):
+        return f'{self.ANSI[color]} {message}{self.ANSI["reset"]}'
 
 
 def create_session() -> requests.Session:
@@ -69,3 +72,7 @@ def time_left_until_all_data_is_fetched(documents_left):
     seconds %= 60
 
     return f'{hours}h {minutes}m {seconds}s'
+
+
+def state_file_exists():
+    return os.path.exists('state.json')
