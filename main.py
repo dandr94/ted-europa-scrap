@@ -6,7 +6,7 @@ from data_handling import load_existing_data, OUTPUT_FILE, load_state, save_stat
 from data_scrapper import scrape_ted_data, fetch_hrefs, parse_url, get_last_page, SEARCH_URL, BASE_WEBSITE
 from utils import fetch_response, create_session, get_cookies, get_current_time, time_left_until_all_data_is_fetched, \
     TextFormatter
-from user_interface import print_last_processed_page_message, get_user_choice_for_last_processed_page
+from user_interface import get_user_choice_for_action, default_app_message
 
 REQUEST_DELAY = 1
 
@@ -29,19 +29,20 @@ def main() -> None:
 
     all_data = load_existing_data(OUTPUT_FILE)
     state = load_state()
+
     last_processed_page = state.get('last_processed_page', 1)
-    existing_links = set(entry['URL'] for entry in all_data)
-    last_processed_flag = True
+    existing_links = {entry['URL'] for entry in all_data}
 
-    if last_processed_page != 1:
-        print_last_processed_page_message(last_processed_page)
-        user_choice = get_user_choice_for_last_processed_page()
+    default_app_message(text_formatter, len(existing_links), last_processed_page, True if all_data else False,
+                        True if state else False)
 
-        if user_choice == 'n':
+    action = None
+
+    if state:
+        action = get_user_choice_for_action()
+
+        if action == '2':
             last_processed_page = 1
-            state['last_processed_page'] = last_processed_page
-            save_state(state)
-            last_processed_flag = False
 
     try:
         response = fetch_response(session, SEARCH_URL, cookies)
@@ -78,12 +79,7 @@ def main() -> None:
                 data_url = BASE_WEBSITE + current_url
                 document_main_url = BASE_WEBSITE + href
 
-                if document_main_url in existing_links and not last_processed_flag:
-                    print(text_formatter.format_message_success('Data successfully updated.'))
-                    logging.info('Data successfully updated.')
-                    return
-
-                if document_main_url in existing_links and last_processed_flag:
+                if document_main_url in existing_links and action == '1':
                     print(text_formatter.format_message_work_in_progress(
                         f'Continuing to next URL on page {page}, because this one is already scrapped: {document_main_url}'))
 
@@ -91,6 +87,12 @@ def main() -> None:
                         f'Continuing to the next URL on page {page}, because this one is already scrapped: {document_main_url}')
 
                     continue
+
+                if document_main_url in existing_links and action == '2':
+                    print(text_formatter.format_message_success('Data successfully updated.'))
+                    logging.info('Data successfully updated.')
+                    return
+
                 print(text_formatter.format_message_work_in_progress(
                     f'[{get_current_time()}] - Working on URL on page {page}/{last_page_number}: {current_url}...'))
 
@@ -98,10 +100,13 @@ def main() -> None:
 
                 if data:
                     all_data.append(data)
+
                     print(text_formatter.format_message_success(
                         f'[{get_current_time()}] - Successfully fetched data on page {page} from URL {data_url}'))
 
                     logging.info(f'Successfully fetched data on page {page} from URL {data_url}')
+
+                    save_data(all_data, OUTPUT_FILE)
 
                 else:
                     print(text_formatter.format_message_fail(
@@ -112,23 +117,21 @@ def main() -> None:
                         f'Impossible to fetch data from URL: {document_main_url} on page {page} because it does not '
                         f'have a data page')
 
-                time.sleep(REQUEST_DELAY)
+                save_state(state)
 
-            save_data(all_data, OUTPUT_FILE)
+                time.sleep(REQUEST_DELAY)
 
             logging.info(f'[{get_current_time()}] - Data saved successfully to {OUTPUT_FILE}!')
 
-            if last_processed_flag:
+            if not action or action == '1':  # ETA but bad way of doing it
                 pages_remaining = last_page_number - state['last_processed_page']
-                documents_left = pages_remaining * 25
+                documents_left = pages_remaining * (25 * REQUEST_DELAY)
                 print(text_formatter.format_message_work_in_progress(
                     f'[{get_current_time()}] - Time left until all data is fetched: ~{time_left_until_all_data_is_fetched(documents_left)}'))
 
     except KeyboardInterrupt:
         print("\nProcess interrupted by user. Saving data collected so far.")
         logging.info("Process interrupted by user. Saving data collected so far.")
-
-        save_data(all_data, OUTPUT_FILE)
 
     except Exception as e:
         print(text_formatter.format_message_fail(f"An unexpected error occurred - {str(e)}"))
