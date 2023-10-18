@@ -1,13 +1,9 @@
 import json
 from typing import List, Dict
 
-from utils import get_current_time, TextFormatter
-
 OUTPUT_FILE = 'output.json'
 
 STATE_FILE = 'state.json'
-
-text_formatter = TextFormatter()
 
 
 def load_existing_data(filename: str) -> List[Dict[str, str]]:
@@ -39,7 +35,6 @@ def save_data(data: List[Dict[str, str]], filename: str) -> None:
     """
     with open(filename, 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
-    print(text_formatter.format_message_success(f'[{get_current_time()}] - Data saved successfully to {filename}!'))
 
 
 def load_state() -> Dict:
