@@ -2,10 +2,10 @@ import time
 
 from bs4 import BeautifulSoup
 from data_handling import load_existing_data, OUTPUT_FILE, load_state, save_state, save_data
-from data_scrapper import scrape_ted_data, fetch_hrefs, parse_url, get_last_page, SEARCH_URL, BASE_WEBSITE
-from utils import fetch_response, create_session, get_cookies, get_current_time, TextFormatter, url_is_scrapped, Logger, \
-    update_has_reach_last_scrapped_url, MessageProvider, action_is_update
-from user_interface import get_user_choice_for_action, default_app_message
+from data_scrapper import scrape_ted_data, extract_hrefs, modify_url, get_last_page, SEARCH_URL, BASE_WEBSITE
+from utils import fetch_response, create_session, get_cookies, TextFormatter, url_is_scrapped, Logger, \
+    update_has_reach_last_scrapped_url, action_is_update
+from user_interface import get_user_choice_for_action, MessageProvider
 
 REQUEST_DELAY = 1
 MAXIMUM_DOCUMENTS_PER_PAGE = 25
@@ -25,8 +25,11 @@ def main() -> None:
     last_processed_page = state.get('last_processed_page', 1)
     existing_links = {entry['URL'] for entry in all_data}
 
-    default_app_message(text_formatter, len(existing_links), last_processed_page, True if all_data else False,
-                        True if state else False)
+    message_provider.default_app_message(text_formatter,
+                                         len(existing_links),
+                                         last_processed_page,
+                                         bool(all_data),
+                                         bool(state))
 
     action = None
 
@@ -57,7 +60,16 @@ def main() -> None:
 
         for page in range(last_processed_page, last_page_number):
             params = {'page': page}
-            hrefs = fetch_hrefs(session, SEARCH_URL, cookies, params)
+
+            response = fetch_response(session, SEARCH_URL, cookies, params)
+
+            if not response:
+                print(text_formatter.format_message_fail(message_provider.message_failed_to_retrieve_url(SEARCH_URL)))
+                logger.log_error(message_provider.message_failed_to_retrieve_url(SEARCH_URL))
+
+                return
+
+            hrefs = extract_hrefs(response)
 
             if not hrefs:
                 print(text_formatter.format_message_fail(
@@ -72,7 +84,7 @@ def main() -> None:
             save_state(state)
 
             for href in hrefs:
-                current_url = parse_url(href)
+                current_url = modify_url(href)
                 data_url = BASE_WEBSITE + current_url
                 document_main_url = BASE_WEBSITE + href
 
