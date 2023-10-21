@@ -14,42 +14,20 @@ SEARCH_URL = "https://ted.europa.eu/TED/search/searchResult.do"
 logger = logging.getLogger(__name__)
 
 
-def fetch_hrefs(session: requests.Session, url: str, cookies: dict, params: Optional[dict] = None) -> List[str]:
+def extract_hrefs(response: requests.Response) -> List[str]:
     """
-    Fetch and extract data from a webpage.
-
-    Args:
-        session (requests.Session): The session for making HTTP requests.
-        url (str): The URL to fetch data from.
-        cookies (dict): Cookies to be used in the request.
-        params (dict, optional): Query parameters for the request.
-
-    Returns:
-        List[str]: List of extracted URLs.
+        Extract all document hrefs from current page.
     """
-    try:
-        response = fetch_response(session, url, cookies, params)
-        if not response:
-            return []
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        td_elements = soup.find_all('td', class_='nowrap')
-        hrefs = [td.find('a')['href'] for td in td_elements if td.find('a')]
-        return hrefs
-    except Exception as e:
-        logger.error(f'An error occurred while fetching data from {url}: {str(e)}')
-        return []
+    soup = BeautifulSoup(response.text, 'html.parser')
+    td_elements = soup.find_all('td', class_='nowrap')
+    hrefs = [td.find('a')['href'] for td in td_elements if td.find('a')]
+    return hrefs
 
 
 def get_last_page(element: BeautifulSoup) -> int:
     """
-    Get the last page number from the BeautifulSoup element.
-
-    Args:
-        element (BeautifulSoup): The BeautifulSoup element containing pagination information.
-
-    Returns:
-        int: The last page number.
+        Get the last page number from the search result.
     """
     try:
         last_page_link = element.find('a')
@@ -61,15 +39,9 @@ def get_last_page(element: BeautifulSoup) -> int:
         return 0
 
 
-def parse_url(href: str) -> str:
+def modify_url(href: str) -> str:
     """
-    Parse and modify a URL.
-
-    Args:
-        href (str): The URL to be modified.
-
-    Returns:
-        str: The modified URL.
+        Modify a URL. Helps with constructing the data page url from the main document one.
     """
     return href.replace("TEXT", "DATA").replace("src=0", "tabId=3")
 
@@ -77,16 +49,10 @@ def parse_url(href: str) -> str:
 def data_page_exist_in_document(soup: BeautifulSoup) -> bool:
     """
        Check if a data page exists in the document.
-
-       Args:
-           soup (BeautifulSoup): The BeautifulSoup object representing the HTML content of the document.
-
-       Returns:
-           bool: True if a data page exists in the document, False otherwise.
     """
     try:
         data = soup.select_one('a.selected:-soup-contains("Data")')
-        return True if data else False
+        return bool(data)
     except AttributeError as e:
         logger.error(f'An error occurred while checking if a data page exists: {str(e)}')
         return False
@@ -94,14 +60,9 @@ def data_page_exist_in_document(soup: BeautifulSoup) -> bool:
 
 def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
     """
-    Extracts data from the HTML table on the document's page.
-
-    Args:
-        soup (BeautifulSoup): The BeautifulSoup object representing the HTML page.
-
-    Returns:
-        Dict[str, str]: A dictionary containing extracted data.
+        Extracts data from the HTML table on the document's page.
     """
+
     data_dict = {}
     table = soup.find('table', {'class': 'data'})
 
@@ -118,18 +79,14 @@ def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
     return data_dict
 
 
-def scrape_ted_data(session: Session, cookies, document_data_page_url: str, document_main_page_url) -> \
-        Union[Dict[str, str], None]:
+def scrape_ted_data(session: Session,
+                    cookies: dict,
+                    document_data_page_url: str,
+                    document_main_page_url) -> Union[Dict[str, str], None]:
     """
-    Scrapes data from a TED document page.
-
-    Args:
-        session (Session): The requests.Session object for making HTTP requests.
-        url (str): The URL of the TED document page.
-
-    Returns:
-        Dict[str, str]: A dictionary containing scraped data.
+        Scrapes data from a TED document page.
     """
+
     data_dict = {}
 
     response = fetch_response(session=session, cookies=cookies, url=document_data_page_url)
