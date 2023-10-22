@@ -6,7 +6,7 @@ OUTPUT_FILE = 'output.json'
 STATE_FILE = 'state.json'
 
 
-def load_existing_data(filename: str) -> List[Dict[str, str]]:
+def load_data(filename: str) -> List[Dict[str, str]]:
     """
         Load existing data from a JSON file.
     """
@@ -26,21 +26,21 @@ def save_data(data: List[Dict[str, str]], filename: str) -> None:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
 
 
-def load_state() -> Dict:
+def load_state(filename: str) -> Dict:
     """
         Load the application state from a JSON file.
     """
     try:
-        with open(STATE_FILE, 'r', encoding='utf-8') as state_file:
+        with open(filename, 'r', encoding='utf-8') as state_file:
             state = json.load(state_file)
         return state
     except FileNotFoundError:
         return {}
 
 
-def save_state(state: Dict) -> None:
+def save_state(state: Dict, filename: str) -> None:
     """
         Save the application state to a JSON file.
     """
-    with open(STATE_FILE, 'w', encoding='utf-8') as state_file:
+    with open(filename, 'w', encoding='utf-8') as state_file:
         json.dump(state, state_file, ensure_ascii=False, indent=4)
