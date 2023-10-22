@@ -1,7 +1,7 @@
 import time
 
 from bs4 import BeautifulSoup
-from data_handling import load_existing_data, OUTPUT_FILE, load_state, save_state, save_data
+from data_handling import load_data, OUTPUT_FILE, load_state, save_state, save_data, STATE_FILE
 from data_scrapper import scrape_ted_data, extract_hrefs, modify_url, get_last_page, SEARCH_URL, BASE_WEBSITE
 from utils import fetch_response, create_session, get_cookies, TextFormatter, url_is_scrapped, Logger, \
     update_has_reach_last_scrapped_url, action_is_update
@@ -19,8 +19,8 @@ def main() -> None:
     session = create_session()
     cookies = get_cookies()
 
-    all_data = load_existing_data(OUTPUT_FILE)
-    state = load_state()
+    all_data = load_data(OUTPUT_FILE)
+    state = load_state(STATE_FILE)
 
     last_processed_page = state.get('last_processed_page', 1)
     existing_links = {entry['URL'] for entry in all_data}
@@ -81,7 +81,7 @@ def main() -> None:
 
             state['last_processed_page'] = page
 
-            save_state(state)
+            save_state(state, STATE_FILE)
 
             for href in hrefs:
                 current_url = modify_url(href)
@@ -129,7 +129,7 @@ def main() -> None:
 
                     logger.log_warning(message_provider.message_no_data_page(page, document_main_url))
 
-                save_state(state)
+                save_state(state, STATE_FILE)
 
                 time.sleep(REQUEST_DELAY)
 
