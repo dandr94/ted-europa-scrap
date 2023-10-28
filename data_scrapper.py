@@ -49,11 +49,9 @@ def data_page_exist_in_document(soup: BeautifulSoup) -> bool:
     """
        Check if a data page exists in the document.
     """
-    try:
-        data = soup.select_one('a.selected:-soup-contains("Data")')
-        return bool(data)
-    except AttributeError:
-        return False
+    data = soup.select_one('a.selected:-soup-contains("Data")')
+
+    return bool(data)
 
 
 def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
@@ -77,7 +75,9 @@ def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
     return data_dict
 
 
-def scrape_ted_data(response_text: str,
+def scrape_ted_data(session: Session,
+                    cookies: dict,
+                    document_data_page_url: str,
                     document_main_page_url) -> Union[Dict[str, str], None]:
     """
         Scrapes data from a TED document page.
@@ -85,7 +85,8 @@ def scrape_ted_data(response_text: str,
 
     data_dict = {}
 
-    soup = BeautifulSoup(response_text, 'html.parser')
+    response = fetch_response(session=session, cookies=cookies, url=document_data_page_url)
+    soup = BeautifulSoup(response.text, 'html.parser')
 
     if not data_page_exist_in_document(soup):
         return None
