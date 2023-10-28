@@ -34,8 +34,7 @@ def get_last_page(element: BeautifulSoup) -> int:
         match = re.search(r'page=(\d+)', last_page_link['href'])
         last_page_number = int(match.group(1))
         return last_page_number
-    except Exception as e:
-        logger.error(f'An error occurred while getting the last page number: {str(e)}')
+    except Exception:
         return 0
 
 
@@ -53,8 +52,7 @@ def data_page_exist_in_document(soup: BeautifulSoup) -> bool:
     try:
         data = soup.select_one('a.selected:-soup-contains("Data")')
         return bool(data)
-    except AttributeError as e:
-        logger.error(f'An error occurred while checking if a data page exists: {str(e)}')
+    except AttributeError:
         return False
 
 
@@ -79,9 +77,7 @@ def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
     return data_dict
 
 
-def scrape_ted_data(session: Session,
-                    cookies: dict,
-                    document_data_page_url: str,
+def scrape_ted_data(response_text: str,
                     document_main_page_url) -> Union[Dict[str, str], None]:
     """
         Scrapes data from a TED document page.
@@ -89,8 +85,7 @@ def scrape_ted_data(session: Session,
 
     data_dict = {}
 
-    response = fetch_response(session=session, cookies=cookies, url=document_data_page_url)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(response_text, 'html.parser')
 
     if not data_page_exist_in_document(soup):
         return None
