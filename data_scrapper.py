@@ -75,9 +75,7 @@ def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
     return data_dict
 
 
-def scrape_ted_data(session: Session,
-                    cookies: dict,
-                    document_data_page_url: str,
+def scrape_ted_data(response_text: str,
                     document_main_page_url) -> Union[Dict[str, str], None]:
     """
         Scrapes data from a TED document page.
@@ -85,8 +83,7 @@ def scrape_ted_data(session: Session,
 
     data_dict = {}
 
-    response = fetch_response(session=session, cookies=cookies, url=document_data_page_url)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(response_text, 'html.parser')
 
     if not data_page_exist_in_document(soup):
         return None
