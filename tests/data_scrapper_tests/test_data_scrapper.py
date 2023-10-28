@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 from data_scrapper import extract_hrefs, get_last_page, modify_url, data_page_exist_in_document, \
     extract_data_from_table, scrape_ted_data
+from utils import fetch_response
 
 
 class DataScrapperTests(unittest.TestCase):
@@ -184,3 +185,24 @@ class DataScrapperTests(unittest.TestCase):
         }
         self.assertEqual(data_dict, expected_data)
 
+    # scrape_test_data
+    def test_no_data_page_in_document(self):
+        response_text = '<html><body>No Data Page</body></html>'
+        result = scrape_ted_data(response_text, 'main_page_url')
+        self.assertIsNone(result)
+
+    def test_set_url(self):
+        html_content = """
+                <html>
+                    <body>
+                        <a class="selected">Data</a>
+                    </body>
+                </html>
+                """
+        result = scrape_ted_data(html_content, 'main_page_url')
+
+        expected_result = {
+            'URL': 'main_page_url',
+        }
+
+        self.assertEqual(result, expected_result)
