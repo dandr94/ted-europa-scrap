@@ -34,8 +34,7 @@ def get_last_page(element: BeautifulSoup) -> int:
         match = re.search(r'page=(\d+)', last_page_link['href'])
         last_page_number = int(match.group(1))
         return last_page_number
-    except Exception as e:
-        logger.error(f'An error occurred while getting the last page number: {str(e)}')
+    except Exception:
         return 0
 
 
@@ -50,12 +49,9 @@ def data_page_exist_in_document(soup: BeautifulSoup) -> bool:
     """
        Check if a data page exists in the document.
     """
-    try:
-        data = soup.select_one('a.selected:-soup-contains("Data")')
-        return bool(data)
-    except AttributeError as e:
-        logger.error(f'An error occurred while checking if a data page exists: {str(e)}')
-        return False
+    data = soup.select_one('a.selected:-soup-contains("Data")')
+
+    return bool(data)
 
 
 def extract_data_from_table(soup: BeautifulSoup) -> Dict[str, str]:
